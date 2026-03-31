@@ -11,20 +11,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:namecard/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('디지털 명함 기본 렌더링 테스트', (WidgetTester tester) async {
+    // pumpWidget: 테스트 환경에서 위젯 트리를 빌드한다.
+    await tester.pumpWidget(const NameCardApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // 1) 앱 타이틀(AppBar 제목)이 제대로 표시되는지 확인한다.
+    expect(find.text('Digital Name Card'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // 2) 프로필 이름과 직책이 화면에 존재하는지 확인한다.
+    expect(find.text('Jane Doe'), findsOneWidget);
+    expect(find.text('Software Engineer'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // 3) CircleAvatar(프로필 아바타)가 하나 존재하는지 확인한다.
+    expect(find.byType(CircleAvatar), findsOneWidget);
   });
 }
