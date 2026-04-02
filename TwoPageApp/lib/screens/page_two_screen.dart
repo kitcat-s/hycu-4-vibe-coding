@@ -7,24 +7,19 @@ import 'package:flutter/material.dart';
 /// - `lib/screens/` 아래에 화면별 파일을 두면 찾기 쉽고, 나중에
 ///   [GoRouter] 등으로 라우트만 바꿀 때도 수정 범위가 명확합니다.
 ///
-/// **다음 단계에서 할 일(참고)**
-/// - 첫 화면의 [ListTile.onTap]에서 아래처럼 화면을 띄우고 문자열을 넘깁니다.
-///   ```dart
-///   Navigator.of(context).push(
-///     MaterialPageRoute<void>(
-///       builder: (BuildContext context) =>
-///           PageTwoScreen(itemName: label),
-///     ),
-///   );
-///   ```
+/// **전달받은 문자열을 쓰는 흐름 (표준 패턴)**
+/// 1. 첫 화면에서 `PageTwoScreen(itemName: label)`처럼 **생성자**로 넘깁니다.
+/// 2. 아래 [itemName]은 **필드**에 저장되며, `build`가 다시 실행될 때까지
+///    그대로 유지됩니다.
+/// 3. [build] 안에서 `Text(itemName)`처럼 **위젯에 표시**하면 됩니다.
 class PageTwoScreen extends StatelessWidget {
   const PageTwoScreen({
     super.key,
     required this.itemName,
   });
 
-  /// 첫 화면에서 넘겨받을 항목 이름입니다.
-  /// 다음 단계에서 [Navigator.push]의 인자로 연결하면 됩니다.
+  /// 첫 화면의 [Navigator.push]로 넘긴 문자열이 여기에 들어옵니다.
+  /// (예: `PageTwoScreen(itemName: 'Item A')` → 이 필드는 `'Item A'`)
   final String itemName;
 
   @override
@@ -55,8 +50,8 @@ class PageTwoScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 항목 이름을 화면 중앙 부근에 크게 표시합니다.
-                // 나중에 서버/상태에서 받은 문자열을 그대로 넣으면 됩니다.
+                // [itemName]은 위 생성자에서 받은 값입니다. 동일한 값을
+                // 여러 위젯에서 사용할 수 있습니다.
                 Text(
                   itemName,
                   textAlign: TextAlign.center,
