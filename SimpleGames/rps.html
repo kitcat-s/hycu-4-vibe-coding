@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>가위바위보</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["DM Sans", "system-ui", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap"
+    rel="stylesheet" />
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 font-sans">
+  <nav class="absolute left-0 right-0 top-0 flex justify-center p-4">
+    <a href="index.html"
+      class="text-sm font-medium text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded">
+      ← 게임 목록
+    </a>
+  </nav>
+  <main class="w-full max-w-md">
+    <header class="text-center">
+      <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+        가위바위보
+      </h1>
+      <p class="mt-2 text-sm text-slate-400">
+        아래에서 하나를 고르면 컴퓨터와 한 판 붙습니다.
+      </p>
+    </header>
+
+    <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl" aria-live="polite">
+      <div class="grid grid-cols-3 gap-3">
+        <button type="button" data-choice="scissors"
+          class="choice-btn flex flex-col items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-5 text-sm font-semibold text-white transition hover:border-blue-500 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+          <span class="text-4xl leading-none" aria-hidden="true">✌️</span>
+          가위
+        </button>
+        <button type="button" data-choice="rock"
+          class="choice-btn flex flex-col items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-5 text-sm font-semibold text-white transition hover:border-blue-500 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+          <span class="text-4xl leading-none" aria-hidden="true">✊</span>
+          바위
+        </button>
+        <button type="button" data-choice="paper"
+          class="choice-btn flex flex-col items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-5 text-sm font-semibold text-white transition hover:border-blue-500 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+          <span class="text-4xl leading-none" aria-hidden="true">✋</span>
+          보
+        </button>
+      </div>
+
+      <div id="result-panel"
+        class="mt-6 hidden rounded-2xl border-2 border-blue-500/35 bg-gradient-to-b from-slate-900/95 to-slate-950 p-6 text-center shadow-xl shadow-blue-950/40 ring-1 ring-white/10 sm:p-8">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400/90">
+          이번 판 결과
+        </p>
+        <div class="mt-5 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+          <div class="flex min-w-[5rem] flex-col items-center gap-2">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">나</span>
+            <span id="result-player-emoji" class="text-5xl leading-none sm:text-6xl"></span>
+          </div>
+          <span class="select-none text-2xl font-black text-slate-600 sm:text-3xl">VS</span>
+          <div class="flex min-w-[5rem] flex-col items-center gap-2">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">컴퓨터</span>
+            <div
+              class="flex min-h-[5.5rem] min-w-[5.5rem] items-center justify-center rounded-xl border border-slate-700/90 bg-slate-950/70 px-3 py-2 shadow-inner shadow-black/40">
+              <span id="result-computer-emoji"
+                class="text-5xl leading-none transition-transform duration-75 will-change-transform sm:text-6xl"></span>
+            </div>
+          </div>
+        </div>
+        <p id="result-outcome" class="mt-6 text-3xl font-extrabold tracking-tight text-white sm:text-4xl"
+          aria-atomic="true"></p>
+      </div>
+    </section>
+
+    <section class="mt-6 flex flex-wrap items-center justify-center gap-4 text-center text-sm text-slate-400"
+      aria-label="전적">
+      <span><span class="font-semibold text-emerald-400">승</span> <span id="wins">0</span></span>
+      <span class="text-slate-600">|</span>
+      <span><span class="font-semibold text-amber-400">무</span> <span id="draws">0</span></span>
+      <span class="text-slate-600">|</span>
+      <span><span class="font-semibold text-rose-400">패</span> <span id="losses">0</span></span>
+    </section>
+
+    <div class="mt-6 flex justify-center">
+      <button id="reset" type="button"
+        class="rounded-lg border border-slate-600 bg-transparent px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+        전적 초기화
+      </button>
+    </div>
+  </main>
+
+  <script src="rps.js"></script>
+</body>
+
+</html>
