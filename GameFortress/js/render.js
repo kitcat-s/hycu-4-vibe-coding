@@ -25,8 +25,12 @@
   };
 
   GF.drawUi = () => {
-    const { WIDTH, UI_HEIGHT, TURN_NAMES } = GF.config;
+    const { WIDTH, UI_HEIGHT, TURN_NAMES, MAX_HP } = GF.config;
     const { ctx, state } = GF;
+    const pl = state.players[state.turn];
+    const wn = GF.WEAPONS.normal;
+    const wh = GF.WEAPONS.heavy;
+    const wc = GF.WEAPONS.cluster;
 
     ctx.fillStyle = "#121737";
     ctx.fillRect(0, 0, WIDTH, UI_HEIGHT);
@@ -36,16 +40,35 @@
     ctx.strokeRect(2, 2, WIDTH - 4, UI_HEIGHT - 4);
 
     ctx.fillStyle = "#e4ecff";
-    ctx.font = "bold 22px 'Courier New', monospace";
+    ctx.font = "bold 20px 'Courier New', monospace";
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
-    ctx.fillText(`TURN: ${TURN_NAMES[state.turn]}`, 18, UI_HEIGHT / 2);
+    ctx.fillText(`TURN: ${TURN_NAMES[state.turn]}`, 14, 26);
+
+    ctx.font = "16px 'Courier New', monospace";
+    ctx.fillStyle = "#c8d8ff";
+    const p0 = state.players[0];
+    const p1 = state.players[1];
+    ctx.fillText(`P1 HP ${p0.hp}/${MAX_HP}`, 200, 26);
+    ctx.fillText(`P2 HP ${p1.hp}/${MAX_HP}`, 360, 26);
 
     ctx.fillStyle = "#9ec0ff";
     ctx.textAlign = "right";
     const windArrow = state.wind < 0 ? "<" : ">";
-    ctx.fillText(`WIND: ${windArrow} ${Math.abs(state.wind)}`, WIDTH - 20, UI_HEIGHT / 2);
+    ctx.fillText(`WIND: ${windArrow} ${Math.abs(state.wind)}`, WIDTH - 14, 26);
     ctx.textAlign = "left";
+
+    ctx.font = "14px 'Courier New', monospace";
+    const rowWeapon = (x0, key, label, count, id) => {
+      const on = pl.selectedWeapon === id;
+      ctx.fillStyle = on ? "#ffd56b" : "#9ec0ff";
+      ctx.fillText(`${key}:${label}(${count})`, x0, 62);
+    };
+    rowWeapon(14, wn.key, wn.label, pl.ammo.normal, "normal");
+    rowWeapon(182, wh.key, wh.label, pl.ammo.heavy, "heavy");
+    rowWeapon(350, wc.key, wc.label, pl.ammo.cluster, "cluster");
+    ctx.fillStyle = "#7ea0ff";
+    ctx.fillText("현재 턴 탄약 · [R] 재시작", WIDTH - 220, 62);
   };
 
   GF.drawTerrain = () => {
@@ -96,7 +119,7 @@
   };
 
   GF.drawAimLine = () => {
-    if (GF.state.projectile) return;
+    if (GF.state.gameOver || GF.state.projectiles.length > 0) return;
 
     const { ctx } = GF;
     const aim = GF.getAimForTurn();
@@ -116,10 +139,11 @@
     ctx.setLineDash([]);
   };
 
-  GF.drawProjectile = () => {
-    if (!GF.state.projectile) return;
-    GF.ctx.fillStyle = "#fff3b0";
-    GF.ctx.fillRect(GF.snap(GF.state.projectile.x) - 3, GF.snap(GF.state.projectile.y) - 3, 6, 6);
+  GF.drawProjectiles = () => {
+    GF.state.projectiles.forEach((p) => {
+      GF.ctx.fillStyle = p.clusterChild ? "#b8ffb0" : "#fff3b0";
+      GF.ctx.fillRect(GF.snap(p.x) - 3, GF.snap(p.y) - 3, 6, 6);
+    });
   };
 
   GF.drawExplosions = () => {
@@ -132,6 +156,26 @@
       ctx.arc(e.x, e.y, GF.snap(radius), 0, Math.PI * 2);
       ctx.fill();
     });
+  };
+
+  GF.drawGameOverOverlay = () => {
+    const { WIDTH, HEIGHT, UI_HEIGHT, TURN_NAMES } = GF.config;
+    const { ctx, state } = GF;
+    if (!state.gameOver || state.winner === null) return;
+
+    ctx.fillStyle = "rgba(7, 10, 24, 0.72)";
+    ctx.fillRect(0, UI_HEIGHT, WIDTH, HEIGHT - UI_HEIGHT);
+
+    ctx.fillStyle = "#e4ecff";
+    ctx.font = "bold 34px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${TURN_NAMES[state.winner]} 승리!`, WIDTH / 2, HEIGHT / 2 - 18);
+
+    ctx.font = "20px 'Courier New', monospace";
+    ctx.fillStyle = "#9ec0ff";
+    ctx.fillText("R 키: 다시 시작", WIDTH / 2, HEIGHT / 2 + 28);
+    ctx.textAlign = "left";
   };
 
   GF.draw = () => {
@@ -150,7 +194,8 @@
     GF.drawCannon(cannons[1], state.turn === 1 ? aim.angle : Math.PI + 0.35);
 
     GF.drawAimLine();
-    GF.drawProjectile();
+    GF.drawProjectiles();
     GF.drawExplosions();
+    GF.drawGameOverOverlay();
   };
 })();

@@ -9,7 +9,30 @@
     });
 
     GF.canvas.addEventListener("click", () => {
+      if (GF.state.gameOver) return;
       GF.launchProjectile();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "KeyR") {
+        e.preventDefault();
+        GF.resetMatch();
+        return;
+      }
+      if (GF.state.gameOver) return;
+      if (GF.state.projectiles.length > 0) return;
+
+      const pl = GF.state.players[GF.state.turn];
+      if (e.code === "Digit1") {
+        e.preventDefault();
+        pl.selectedWeapon = "normal";
+      } else if (e.code === "Digit2") {
+        e.preventDefault();
+        pl.selectedWeapon = "heavy";
+      } else if (e.code === "Digit3") {
+        e.preventDefault();
+        pl.selectedWeapon = "cluster";
+      }
     });
   };
 })();

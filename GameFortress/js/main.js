@@ -11,8 +11,11 @@
   };
 
   GF.start = () => {
-    GF.state.terrain = GF.createTerrain();
-    GF.bindInput();
+    GF.resetMatch();
+    if (!GF._inputBound) {
+      GF.bindInput();
+      GF._inputBound = true;
+    }
     requestAnimationFrame((now) => {
       GF.state.lastTime = now;
       GF.tick(now);
