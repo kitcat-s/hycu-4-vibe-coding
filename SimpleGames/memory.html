@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>메모리 게임</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["DM Sans", "system-ui", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap"
+    rel="stylesheet" />
+  <style>
+    .card-scene {
+      perspective: 1000px;
+    }
+
+    .card-inner {
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 font-sans">
+  <nav class="absolute left-0 right-0 top-0 flex justify-center p-4">
+    <a href="index.html"
+      class="text-sm font-medium text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded">
+      ← 게임 목록
+    </a>
+  </nav>
+  <header class="text-center mb-8 max-w-md">
+    <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+      메모리 게임
+    </h1>
+    <p class="mt-2 text-sm text-slate-400">
+      같은 그림 두 장을 맞추세요. <span id="moves" class="text-blue-300 font-semibold">0</span>번 뒤집음
+    </p>
+    <button id="restart" type="button"
+      class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-950">
+      다시 하기
+    </button>
+  </header>
+
+  <main id="board" class="grid w-full max-w-sm grid-cols-4 gap-3 sm:max-w-md sm:gap-4" aria-live="polite"></main>
+
+  <div id="win-banner"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 p-6 backdrop-blur-sm" role="dialog"
+    aria-modal="true" aria-labelledby="win-title">
+    <div class="max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-8 text-center shadow-2xl">
+      <p class="text-sm font-medium uppercase tracking-widest text-blue-400">
+        완료
+      </p>
+      <h2 id="win-title" class="mt-2 text-2xl font-bold text-white">
+        모든 카드를 맞췄어요!
+      </h2>
+      <p class="mt-2 text-slate-400">
+        총 <span id="win-moves" class="font-semibold text-blue-300"></span>번 뒤집었습니다.
+      </p>
+      <button id="win-close" type="button"
+        class="mt-6 w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-500">
+        새 게임
+      </button>
+    </div>
+  </div>
+
+  <script src="memory.js"></script>
+</body>
+
+</html>
