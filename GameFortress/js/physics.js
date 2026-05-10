@@ -9,6 +9,25 @@
 
   GF.getCannonHitPoint = (cannon) => ({ x: cannon.x, y: cannon.y - 10 });
 
+  GF.moveCurrentPlayer = (dir) => {
+    if (GF.state.gameOver) return;
+    if (GF.state.projectiles.length > 0) return;
+    const { WIDTH, PLAYER_MOVE_STEP } = GF.config;
+    const idx = GF.state.turn;
+    const otherIdx = idx === 0 ? 1 : 0;
+    const minX = 24;
+    const maxX = WIDTH - 24;
+    const gap = 80;
+    let next = GF.state.cannonX[idx] + dir * PLAYER_MOVE_STEP;
+    next = GF.clamp(next, minX, maxX);
+    if (idx === 0) {
+      next = Math.min(next, GF.state.cannonX[otherIdx] - gap);
+    } else {
+      next = Math.max(next, GF.state.cannonX[otherIdx] + gap);
+    }
+    GF.state.cannonX[idx] = GF.clamp(next, minX, maxX);
+  };
+
   GF.hitCannon = (projectile, cannon) => {
     const halfW = 18;
     const top = cannon.y - 28;
@@ -44,6 +63,22 @@
 
   GF.addExplosionVisual = (x, y, radius) => {
     GF.state.explosions.push({ x, y, age: 0, duration: 0.35, radius });
+  };
+
+  GF.addHitSpark = (x, y) => {
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 70 + Math.random() * 120;
+      GF.state.hitParticles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 40,
+        age: 0,
+        life: 0.25 + Math.random() * 0.2,
+      });
+    }
   };
 
   GF.resolveExplosion = (x, y, weapon, shooterIndex) => {
@@ -132,7 +167,8 @@
   };
 
   GF.updateProjectile = (dt) => {
-    const { WIDTH, HEIGHT, UI_HEIGHT, PIXELS_PER_METER, GRAVITY } = GF.config;
+    const { WIDTH, HEIGHT, UI_HEIGHT, BOTTOM_UI_HEIGHT, PIXELS_PER_METER, GRAVITY } = GF.config;
+    const floorY = HEIGHT - BOTTOM_UI_HEIGHT;
     const list = GF.state.projectiles;
     if (list.length === 0) return;
 
@@ -146,7 +182,7 @@
 
       if (GF.tryClusterSplit(p)) continue;
 
-      if (p.x < 0 || p.x >= WIDTH || p.y >= HEIGHT || p.y < UI_HEIGHT) {
+      if (p.x < 0 || p.x >= WIDTH || p.y >= floorY || p.y < UI_HEIGHT) {
         GF.removeProjectile(p);
         GF.onProjectileGone();
         continue;
@@ -157,8 +193,7 @@
         const ex = p.x;
         const ey = p.y;
         const own = p.owner;
-        const boom =
-          p.weapon === "cluster" && !p.clusterChild ? "normal" : p.clusterChild ? "cluster" : p.weapon;
+        const boom = p.weapon === "cluster" && !p.clusterChild ? "normal" : p.clusterChild ? "cluster" : p.weapon;
         GF.removeProjectile(p);
         GF.resolveExplosion(ex, ey, boom, own);
         if (!GF.state.gameOver) GF.onProjectileGone();
@@ -173,6 +208,7 @@
         const own = p.owner;
         const boom = p.clusterChild ? "cluster" : p.weapon;
         GF.removeProjectile(p);
+        GF.addHitSpark(ex, ey);
         GF.resolveExplosion(ex, ey, boom, own);
         if (!GF.state.gameOver) GF.onProjectileGone();
       }
@@ -183,6 +219,17 @@
     GF.state.explosions = GF.state.explosions.filter((e) => {
       e.age += dt;
       return e.age <= e.duration;
+    });
+  };
+
+  GF.updateHitParticles = (dt) => {
+    const g = GF.config.GRAVITY * GF.config.PIXELS_PER_METER * 0.35;
+    GF.state.hitParticles = GF.state.hitParticles.filter((p) => {
+      p.vy += g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.age += dt;
+      return p.age <= p.life;
     });
   };
 })();

@@ -6,6 +6,7 @@
     GF.state.lastTime = now;
     GF.updateProjectile(dt);
     GF.updateExplosions(dt);
+    GF.updateHitParticles(dt);
     GF.draw();
     requestAnimationFrame(GF.tick);
   };

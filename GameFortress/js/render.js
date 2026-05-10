@@ -2,9 +2,8 @@
   const GF = window.GF;
 
   GF.getCannonPositions = () => {
-    const { WIDTH } = GF.config;
-    const leftX = 56;
-    const rightX = WIDTH - 56;
+    const leftX = Math.floor(GF.state.cannonX[0]);
+    const rightX = Math.floor(GF.state.cannonX[1]);
     const leftY = GF.state.terrain[leftX];
     const rightY = GF.state.terrain[rightX];
     return [
@@ -20,12 +19,12 @@
     const dy = GF.state.mouse.y - muzzleY;
     const angle = Math.atan2(dy, dx);
     const powerRaw = Math.hypot(dx, dy);
-    const power = GF.clamp(powerRaw * 1.8, 120, 540);
+    const power = GF.clamp(powerRaw * 1.8, 160, 420);
     return { shooter, angle, power };
   };
 
   GF.drawUi = () => {
-    const { WIDTH, UI_HEIGHT, TURN_NAMES, MAX_HP } = GF.config;
+    const { WIDTH, UI_HEIGHT, TURN_NAMES } = GF.config;
     const { ctx, state } = GF;
     const pl = state.players[state.turn];
     const wn = GF.WEAPONS.normal;
@@ -45,19 +44,6 @@
     ctx.textAlign = "left";
     ctx.fillText(`TURN: ${TURN_NAMES[state.turn]}`, 14, 26);
 
-    ctx.font = "16px 'Courier New', monospace";
-    ctx.fillStyle = "#c8d8ff";
-    const p0 = state.players[0];
-    const p1 = state.players[1];
-    ctx.fillText(`P1 HP ${p0.hp}/${MAX_HP}`, 200, 26);
-    ctx.fillText(`P2 HP ${p1.hp}/${MAX_HP}`, 360, 26);
-
-    ctx.fillStyle = "#9ec0ff";
-    ctx.textAlign = "right";
-    const windArrow = state.wind < 0 ? "<" : ">";
-    ctx.fillText(`WIND: ${windArrow} ${Math.abs(state.wind)}`, WIDTH - 14, 26);
-    ctx.textAlign = "left";
-
     ctx.font = "14px 'Courier New', monospace";
     const rowWeapon = (x0, key, label, count, id) => {
       const on = pl.selectedWeapon === id;
@@ -68,20 +54,107 @@
     rowWeapon(182, wh.key, wh.label, pl.ammo.heavy, "heavy");
     rowWeapon(350, wc.key, wc.label, pl.ammo.cluster, "cluster");
     ctx.fillStyle = "#7ea0ff";
-    ctx.fillText("현재 턴 탄약 · [R] 재시작", WIDTH - 220, 62);
+    ctx.fillText("A/D, ←/→ 이동 · [R] 재시작", WIDTH - 250, 62);
+  };
+
+  GF.drawBottomHp = () => {
+    const { WIDTH, HEIGHT, MAX_HP } = GF.config;
+    const { ctx, state } = GF;
+    const p0 = state.players[0];
+    const p1 = state.players[1];
+    const barW = 220;
+    const barH = 16;
+    const y = HEIGHT - 30;
+
+    const drawHpBar = (x, hp, label, alignRight) => {
+      const ratio = GF.clamp(hp / MAX_HP, 0, 1);
+      const fillW = Math.floor((barW - 4) * ratio);
+
+      ctx.fillStyle = "#121737";
+      ctx.fillRect(x, y, barW, barH);
+      ctx.strokeStyle = "#7ea0ff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, barW, barH);
+
+      ctx.fillStyle = ratio > 0.5 ? "#77e486" : ratio > 0.25 ? "#ffd56b" : "#ff7f7f";
+      ctx.fillRect(x + 2, y + 2, fillW, barH - 4);
+
+      ctx.font = "bold 14px 'Courier New', monospace";
+      ctx.fillStyle = "#c8d8ff";
+      ctx.textBaseline = "bottom";
+      ctx.textAlign = alignRight ? "right" : "left";
+      ctx.fillText(`${label} HP ${hp}/${MAX_HP}`, alignRight ? x + barW : x, y - 4);
+    };
+
+    drawHpBar(14, p0.hp, "P1", false);
+    drawHpBar(WIDTH - 14 - barW, p1.hp, "P2", true);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+  };
+
+  GF.drawBottomWind = () => {
+    const { WIDTH, HEIGHT } = GF.config;
+    const { ctx, state } = GF;
+    const boxW = 210;
+    const boxH = 34;
+    const bx = Math.floor((WIDTH - boxW) / 2);
+    const y = HEIGHT - 42;
+
+    ctx.fillStyle = "#121737";
+    ctx.fillRect(bx, y, boxW, boxH);
+    ctx.strokeStyle = "#9ec0ff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, y, boxW, boxH);
+
+    const windEmoji = state.wind < 0 ? "⬅️" : state.wind > 0 ? "➡️" : "↔️";
+    const cx = bx + boxW / 2;
+    const cy = y + boxH / 2 + 1;
+
+    ctx.font = "bold 18px 'Courier New', monospace";
+    ctx.fillStyle = "#e4ecff";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText("WIND", cx - 6, cy);
+
+    ctx.font = "22px system-ui, 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(windEmoji, cx + 8, cy);
+
+    ctx.font = "bold 20px 'Courier New', monospace";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#9ec0ff";
+    ctx.fillText(String(Math.abs(state.wind)), cx + 28, cy);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+  };
+
+  GF.drawStars = () => {
+    const { WIDTH } = GF.config;
+    const { ctx, state } = GF;
+    if (!state.stars.length || !state.terrain.length) return;
+    const t = state.terrain;
+    state.stars.forEach((s) => {
+      const xi = GF.clamp(Math.floor(s.x), 0, WIDTH - 1);
+      if (s.y >= t[xi] - 4) return;
+      ctx.fillStyle = s.d > 1 ? "#f0f4ff" : "#b8c8ff";
+      ctx.fillRect(s.x, s.y, s.d, s.d);
+    });
   };
 
   GF.drawTerrain = () => {
-    const { WIDTH, HEIGHT } = GF.config;
+    const { WIDTH, HEIGHT, BOTTOM_UI_HEIGHT } = GF.config;
     const { ctx, state } = GF;
+    const panelTop = HEIGHT - BOTTOM_UI_HEIGHT;
 
     ctx.beginPath();
     ctx.moveTo(0, state.terrain[0]);
     for (let x = 1; x < WIDTH; x++) {
       ctx.lineTo(x, state.terrain[x]);
     }
-    ctx.lineTo(WIDTH, HEIGHT);
-    ctx.lineTo(0, HEIGHT);
+    ctx.lineTo(WIDTH, panelTop);
+    ctx.lineTo(0, panelTop);
     ctx.closePath();
     ctx.fillStyle = "#6e4a2a";
     ctx.fill();
@@ -158,6 +231,18 @@
     });
   };
 
+  GF.drawHitParticles = () => {
+    const { ctx, state } = GF;
+    if (!state.hitParticles.length) return;
+    state.hitParticles.forEach((p) => {
+      const alpha = GF.clamp(1 - p.age / p.life, 0, 1);
+      ctx.fillStyle = alpha > 0.5 ? "#ffd56b" : "#ff8f52";
+      ctx.globalAlpha = alpha;
+      ctx.fillRect(GF.snap(p.x), GF.snap(p.y), 3, 3);
+      ctx.globalAlpha = 1;
+    });
+  };
+
   GF.drawGameOverOverlay = () => {
     const { WIDTH, HEIGHT, UI_HEIGHT, TURN_NAMES } = GF.config;
     const { ctx, state } = GF;
@@ -178,6 +263,17 @@
     ctx.textAlign = "left";
   };
 
+  GF.drawBottomPanel = () => {
+    const { WIDTH, HEIGHT, BOTTOM_UI_HEIGHT } = GF.config;
+    const { ctx } = GF;
+    const top = HEIGHT - BOTTOM_UI_HEIGHT;
+    ctx.fillStyle = "#0f1430";
+    ctx.fillRect(0, top, WIDTH, BOTTOM_UI_HEIGHT);
+    ctx.strokeStyle = "#7ea0ff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(2, top + 2, WIDTH - 4, BOTTOM_UI_HEIGHT - 4);
+  };
+
   GF.draw = () => {
     const { WIDTH, HEIGHT } = GF.config;
     const { ctx, state } = GF;
@@ -185,6 +281,7 @@
     ctx.fillStyle = "#0d1f72";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
+    GF.drawStars();
     GF.drawUi();
     GF.drawTerrain();
 
@@ -195,7 +292,11 @@
 
     GF.drawAimLine();
     GF.drawProjectiles();
+    GF.drawHitParticles();
     GF.drawExplosions();
+    GF.drawBottomPanel();
+    GF.drawBottomHp();
+    GF.drawBottomWind();
     GF.drawGameOverOverlay();
   };
 })();

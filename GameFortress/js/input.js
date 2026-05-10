@@ -23,7 +23,13 @@
       if (GF.state.projectiles.length > 0) return;
 
       const pl = GF.state.players[GF.state.turn];
-      if (e.code === "Digit1") {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") {
+        e.preventDefault();
+        GF.moveCurrentPlayer(-1);
+      } else if (e.code === "ArrowRight" || e.code === "KeyD") {
+        e.preventDefault();
+        GF.moveCurrentPlayer(1);
+      } else if (e.code === "Digit1") {
         e.preventDefault();
         pl.selectedWeapon = "normal";
       } else if (e.code === "Digit2") {
