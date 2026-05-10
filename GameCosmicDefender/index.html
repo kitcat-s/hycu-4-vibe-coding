@@ -12,7 +12,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #0a0514;
+      background: #06020e;
       font-family: "Segoe UI", "Malgun Gothic", sans-serif;
       color: #ff2d95;
     }
@@ -21,28 +21,108 @@
       letter-spacing: 0.35em;
       text-transform: uppercase;
       margin-bottom: 0.75rem;
-      text-shadow: 0 0 12px #ff2d95, 0 0 24px #b026ff;
+      text-shadow: 0 0 14px #ff2d95, 0 0 28px #b026ff, 0 0 40px rgba(0, 245, 212, 0.35);
+    }
+    .shell {
+      position: relative;
+      display: inline-block;
+      border: 2px solid #00f5d4;
+      box-shadow:
+        0 0 28px rgba(0, 245, 212, 0.55),
+        0 0 60px rgba(255, 45, 149, 0.25),
+        inset 0 0 80px rgba(176, 38, 255, 0.12);
     }
     canvas {
       display: block;
-      border: 2px solid #00f5d4;
+      vertical-align: middle;
+    }
+    .ui-panel {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      padding: 1.5rem;
+      text-align: center;
+      background: rgba(6, 2, 14, 0.82);
+      backdrop-filter: blur(4px);
+      pointer-events: auto;
+    }
+    .ui-panel h2 {
+      font-size: 1.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      text-shadow: 0 0 16px #ff2d95, 0 0 32px #d500f9;
+    }
+    .ui-panel p {
+      color: #00f5d4;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 10px rgba(0, 245, 212, 0.6);
+    }
+    .ui-panel .big {
+      font-size: 1.15rem;
+      font-weight: bold;
+    }
+    .ui-panel button {
+      cursor: pointer;
+      margin-top: 0.35rem;
+      padding: 0.65rem 1.8rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #0a0514;
+      font-weight: bold;
+      border: none;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #00ffd5, #00b8d4);
       box-shadow:
-        0 0 20px rgba(0, 245, 212, 0.35),
-        inset 0 0 60px rgba(176, 38, 255, 0.08);
+        0 0 18px rgba(0, 255, 213, 0.65),
+        0 0 36px rgba(255, 45, 149, 0.35);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .ui-panel button:hover {
+      transform: scale(1.04);
+      box-shadow:
+        0 0 26px rgba(0, 255, 213, 0.9),
+        0 0 48px rgba(255, 45, 149, 0.45);
+    }
+    .ui-panel button:active {
+      transform: scale(0.98);
+    }
+    .hidden {
+      display: none !important;
     }
     .hint {
-      margin-top: 0.6rem;
-      font-size: 0.75rem;
-      color: #00f5d4;
-      opacity: 0.85;
-      letter-spacing: 0.12em;
+      margin-top: 0.65rem;
+      font-size: 0.72rem;
+      color: #e040fb;
+      opacity: 0.9;
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 8px rgba(224, 64, 251, 0.5);
     }
   </style>
 </head>
 <body>
   <h1>Cosmic Defender</h1>
-  <canvas id="game" width="800" height="600"></canvas>
-  <p class="hint">방향키 이동 · 스페이스 레이저 · 적·미사일·지형 피하기 · R 재시작</p>
+  <div class="shell">
+    <canvas id="game" width="800" height="600"></canvas>
+    <div id="title-ui" class="ui-panel">
+      <h2>시작</h2>
+      <p class="big">최고 점수 <span id="best-title">0</span></p>
+      <p>방향키 · 스페이스 · 네온 파괴</p>
+      <button type="button" id="btn-start">시작하기</button>
+    </div>
+    <div id="gameover-ui" class="ui-panel hidden">
+      <h2>게임 오버</h2>
+      <p class="big">점수 <span id="go-score">0</span></p>
+      <p class="big">최고 <span id="go-best">0</span></p>
+      <button type="button" id="btn-restart">다시하기</button>
+    </div>
+  </div>
+  <p class="hint">레벨업 시 글리치 · 보스 출현 · BGM은 시작 버튼 후 재생</p>
   <script src="game.js"></script>
 </body>
 </html>
