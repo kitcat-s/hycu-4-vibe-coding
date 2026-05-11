@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GameLodeRunner — 엔진</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <h1 class="page-title">⚔️ Lode Runner ⚔️</h1>
+  <div id="app">
+    <header id="hud" class="hud" aria-live="polite">
+      <span class="hud__item">점수: <strong id="hud-score">0</strong></span>
+      <span class="hud__item">레벨: <strong id="hud-level">1</strong></span>
+      <span class="hud__item">생명: <strong id="hud-lives">3</strong></span>
+    </header>
+    <canvas id="game" width="800" height="600" tabindex="0" aria-label="게임 화면"></canvas>
+    <p class="hint">스페이스 시작 · 방향키/WASD 이동 · Z/X 드릴(좌/우 바닥) · 금괴 3개 수집 후 출구 활성화 · R 재시작</p>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+
+</html>
