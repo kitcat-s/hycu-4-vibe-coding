@@ -31,6 +31,10 @@ export class Player extends GameObject {
     this.animTime = 0;
     this.moveDx = 0;
     this.moveDy = 0;
+    this.moveMode = "walk";
+    this.trappedTimer = 0;
+    this.fallChain = 0;
+    this.justHardLanded = false;
   }
 
   /**
@@ -40,6 +44,21 @@ export class Player extends GameObject {
    */
   updateWithInput(dt, map, keyDown) {
     this.animTime += dt;
+    this.justHardLanded = false;
+
+    if (this.trappedTimer > 0) {
+      this.trappedTimer -= dt;
+      this.animState = ANIM.FALL;
+      if (this.trappedTimer <= 0 && !map.isSolid(this.col, this.row - 1)) {
+        this.tryMove(map, this.col, this.row - 1, "ladder");
+      }
+      return;
+    }
+
+    if (map.isHole(this.col, this.row)) {
+      this.trapInHole(3.5);
+      return;
+    }
 
     if (this.moving) {
       this.moveT += dt;
@@ -53,6 +72,11 @@ export class Player extends GameObject {
         this.col = Math.round(this.x / TILE_SIZE);
         this.row = Math.round(this.y / TILE_SIZE);
         this.animState = ANIM.IDLE;
+        if (this.moveMode === "gravity") this.fallChain += 1;
+        else {
+          if (this.fallChain >= 4) this.justHardLanded = true;
+          this.fallChain = 0;
+        }
       }
       if (this.moveDy > 0) this.animState = ANIM.CLIMB;
       else if (this.moveDy < 0) this.animState = ANIM.FALL;
@@ -66,6 +90,10 @@ export class Player extends GameObject {
     const onLadder = map.isLadder(this.col, this.row);
     const onRope = map.isRope(this.col, this.row);
     const supported = map.isSolid(this.col, this.row + 1) || map.isLadder(this.col, this.row);
+    if (supported && this.fallChain >= 4) {
+      this.justHardLanded = true;
+      this.fallChain = 0;
+    }
 
     const up = keyDown("ArrowUp") || keyDown("KeyW");
     const down = keyDown("ArrowDown") || keyDown("KeyS");
@@ -74,20 +102,20 @@ export class Player extends GameObject {
 
     // 위쪽 이동 우선 판정 (요청: ArrowUp 동작 보강)
     if (up && (onLadder || map.isLadder(this.col, this.row - 1)) && !map.isSolid(this.col, this.row - 1)) {
-      this.tryMove(map, this.col, this.row - 1);
+      this.tryMove(map, this.col, this.row - 1, "ladder");
       this.animState = ANIM.FALL;
       return;
     }
 
     // 중력: 지지대 없고, 사다리/로프 위가 아니면 한 칸 낙하
     if (!supported && !onLadder && !onRope && !map.isSolid(this.col, this.row + 1)) {
-      this.tryMove(map, this.col, this.row + 1);
+      this.tryMove(map, this.col, this.row + 1, "gravity");
       this.animState = ANIM.CLIMB;
       return;
     }
 
     if (down && (onLadder || map.isLadder(this.col, this.row + 1)) && !map.isSolid(this.col, this.row + 1)) {
-      this.tryMove(map, this.col, this.row + 1);
+      this.tryMove(map, this.col, this.row + 1, "ladder");
       this.animState = ANIM.FALL;
       return;
     }
@@ -95,14 +123,14 @@ export class Player extends GameObject {
     const canMoveH = supported || onLadder || onRope;
     if (left && canMoveH && !map.isSolid(this.col - 1, this.row)) {
       this.facing = -1;
-      this.tryMove(map, this.col - 1, this.row);
+      this.tryMove(map, this.col - 1, this.row, "walk");
       this.animState = ANIM.WALK;
       return;
     }
 
     if (right && canMoveH && !map.isSolid(this.col + 1, this.row)) {
       this.facing = 1;
-      this.tryMove(map, this.col + 1, this.row);
+      this.tryMove(map, this.col + 1, this.row, "walk");
       this.animState = ANIM.WALK;
       return;
     }
@@ -114,8 +142,9 @@ export class Player extends GameObject {
    * @param {import("./TileMap.js").TileMap} map
    * @param {number} col
    * @param {number} row
+   * @param {string} mode
    */
-  tryMove(map, col, row) {
+  tryMove(map, col, row, mode = "walk") {
     if (!map.inBounds(col, row) || map.isSolid(col, row)) return;
     this.fromX = this.x;
     this.fromY = this.y;
@@ -123,8 +152,17 @@ export class Player extends GameObject {
     this.toY = row * TILE_SIZE;
     this.moveDx = col - this.col;
     this.moveDy = row - this.row;
+    this.moveMode = mode;
     this.moveT = 0;
     this.moving = true;
+  }
+
+  /** @param {number} seconds */
+  trapInHole(seconds) {
+    this.moving = false;
+    this.trappedTimer = Math.max(this.trappedTimer, seconds);
+    this.fallChain = 0;
+    this.animState = ANIM.FALL;
   }
 
   get centerX() {

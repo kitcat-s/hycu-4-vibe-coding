@@ -1,8 +1,13 @@
 import { GameState } from "./GameState.js";
-import { isKeyDown } from "./Input.js";
+import { consumeKeyPress, isKeyDown } from "./Input.js";
 import { Player } from "./Player.js";
 import { TileMap, TILE_SIZE } from "./TileMap.js";
 import { Camera } from "./Camera.js";
+import { Guard } from "./Guard.js";
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
 
 export class Game {
   /**
@@ -24,9 +29,20 @@ export class Game {
     this.map = new TileMap();
     this.camera = new Camera(canvas.width, canvas.height);
     this.player = new Player();
+    /** @type {Guard[]} */
+    this.guards = [];
+    this.startCell = { col: 2, row: 12 };
+    this.lastEnemyAlert = 0;
+    this.startRequested = false;
+    this.restartRequested = false;
 
-    this._wasSpace = false;
-    this._wasKeyR = false;
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") this.startRequested = true;
+      if (e.code === "KeyR") this.restartRequested = true;
+    });
+
+    this._wasKeyZ = false;
+    this._wasKeyX = false;
   }
 
   resetPlaying() {
@@ -36,53 +52,133 @@ export class Game {
     this.score = 0;
     this.level = 1;
     this.message = "";
+    this.guards = [
+      new Guard(6, 0, { speed: 0.34, intelligence: 0.45, vision: 18, color: "#ca5c5c" }),
+      new Guard(10, 9, { speed: 0.28, intelligence: 0.85, vision: 24, color: "#d97f3f" }),
+    ];
+    this.lastEnemyAlert = 0;
+  }
+
+  respawnPlayer() {
+    this.player = new Player();
+    this.player.lives = Math.max(0, this.player.lives);
+    this.player.x = this.startCell.col * TILE_SIZE;
+    this.player.y = this.startCell.row * TILE_SIZE;
+    this.player.col = this.startCell.col;
+    this.player.row = this.startCell.row;
+  }
+
+  loseLife(reason = "사망") {
+    this.player.lives -= 1;
+    this.audio.playHit();
+    if (this.player.lives <= 0) {
+      this.message = `게임 오버 (${reason})`;
+      this.state = GameState.GAME_OVER;
+      this.audio.stopBgm();
+      return;
+    }
+    const lives = this.player.lives;
+    this.respawnPlayer();
+    this.player.lives = lives;
   }
 
   /** @param {number} dt */
   update(dt) {
-    const space = isKeyDown("Space");
-    const keyR = isKeyDown("KeyR");
+    const pressedSpace = consumeKeyPress("Space") || this.startRequested;
+    const pressedR = consumeKeyPress("KeyR") || this.restartRequested;
+
+    if (pressedR && this.state !== GameState.MENU) {
+      this.audio.playMenuSelect();
+      this.resetPlaying();
+      this.state = GameState.PLAYING;
+      this.audio.playBgm();
+      this.startRequested = false;
+      this.restartRequested = false;
+      this.syncHud();
+      return;
+    }
 
     if (this.state === GameState.MENU) {
-      if (space && !this._wasSpace) {
+      if (pressedSpace) {
         this.audio.playMenuSelect();
         this.audio.resumeFromUserGesture();
         this.resetPlaying();
         this.state = GameState.PLAYING;
+        this.audio.playBgm();
+        this.startRequested = false;
+        this.restartRequested = false;
       }
-      this._wasSpace = space;
-      this._wasKeyR = keyR;
       this.syncHud();
       return;
     }
 
     if (this.state === GameState.GAME_OVER) {
-      if (keyR && !this._wasKeyR) {
+      if (pressedR) {
         this.audio.playMenuSelect();
         this.resetPlaying();
         this.state = GameState.PLAYING;
+        this.audio.playBgm();
+        this.startRequested = false;
+        this.restartRequested = false;
       }
-      this._wasSpace = space;
-      this._wasKeyR = keyR;
       this.syncHud();
       return;
     }
 
-    this._wasSpace = space;
-    this._wasKeyR = keyR;
+    this.startRequested = false;
+    this.restartRequested = false;
+    const keyZ = isKeyDown("KeyZ");
+    const keyX = isKeyDown("KeyX");
 
     this.player.updateWithInput(dt, this.map, (code) => isKeyDown(code));
+    // 카메라 튐 방지: 플레이어 월드 좌표를 맵 경계 안으로 고정
+    this.player.x = clamp(this.player.x, 0, this.map.width - TILE_SIZE);
+    this.player.y = clamp(this.player.y, 0, this.map.height - TILE_SIZE);
     const pCol = Math.round(this.player.x / TILE_SIZE);
     const pRow = Math.round(this.player.y / TILE_SIZE);
+
+    if ((this.player.moveMode === "walk" && this.player.moving) || this.player.animState === "walk") {
+      this.audio.playWalk(dt);
+    }
+
+    // 드릴: 플레이어 양쪽 바닥만 허용
+    const drillRow = pRow + 1;
+    if (keyZ && !this._wasKeyZ && this.map.drill(pCol - 1, drillRow, 15)) this.audio.playDrill();
+    if (keyX && !this._wasKeyX && this.map.drill(pCol + 1, drillRow, 15)) this.audio.playDrill();
+    this._wasKeyZ = keyZ;
+    this._wasKeyX = keyX;
+
+    this.map.update(dt);
 
     if (this.map.collectGold(pCol, pRow)) {
       this.score += 100;
       this.audio.playCollect();
     }
 
-    if (this.map.goldRemaining === 0 && this.map.isExit(pCol, pRow)) {
+    if (this.map.exitActive && this.map.isExit(pCol, pRow)) {
       this.message = "탈출 성공!";
       this.state = GameState.GAME_OVER;
+      this.audio.stopBgm();
+    }
+
+    for (const guard of this.guards) {
+      guard.updateAI(dt, this.map, { col: pCol, row: pRow });
+      const gCol = Math.round(guard.x / TILE_SIZE);
+      const gRow = Math.round(guard.y / TILE_SIZE);
+      const dist = Math.abs(gCol - pCol) + Math.abs(gRow - pRow);
+      if (dist <= 5) this.lastEnemyAlert += dt;
+      if (dist <= 5 && this.lastEnemyAlert >= 0.8) {
+        this.audio.playEnemyAlert();
+        this.lastEnemyAlert = 0;
+      }
+      if (gCol === pCol && gRow === pRow && guard.trappedTimer <= 0) {
+        this.loseLife("적과 충돌");
+        break;
+      }
+    }
+
+    if (this.player.justHardLanded) {
+      this.loseLife("높은 곳 낙하");
     }
 
     this.camera.follow(this.player.centerX, this.player.centerY, this.map.width, this.map.height);
@@ -113,6 +209,7 @@ export class Game {
     ctx.save();
     ctx.translate(-this.camera.x, -this.camera.y);
     this.map.render(ctx);
+    for (const guard of this.guards) guard.render(ctx);
     this.player.render(ctx);
     ctx.restore();
 

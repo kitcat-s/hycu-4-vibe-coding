@@ -27,6 +27,20 @@ export function createAudioManager() {
     osc.stop(t0 + dur + 0.02);
   }
 
+  /** @type {number | null} */
+  let bgmTimer = null;
+  let stepGate = 0;
+
+  function playBgmPattern() {
+    const notes = [220, 247, 262, 294, 330, 294, 262, 247];
+    let i = 0;
+    if (bgmTimer) clearInterval(bgmTimer);
+    bgmTimer = setInterval(() => {
+      beep(notes[i % notes.length], 0.11, "square");
+      i += 1;
+    }, 180);
+  }
+
   return {
     resumeFromUserGesture() {
       void ensureContext();
@@ -43,6 +57,29 @@ export function createAudioManager() {
     },
     playMenuSelect() {
       beep(440, 0.07);
+    },
+    playWalk(dt = 0.016) {
+      stepGate -= dt;
+      if (stepGate > 0) return;
+      stepGate = 0.15;
+      beep(180, 0.03, "square");
+    },
+    playDrill() {
+      beep(120, 0.08, "square");
+      setTimeout(() => beep(90, 0.1, "square"), 30);
+    },
+    playEnemyAlert() {
+      beep(520, 0.05, "square");
+      setTimeout(() => beep(450, 0.06, "square"), 40);
+    },
+    playBgm() {
+      playBgmPattern();
+    },
+    stopBgm() {
+      if (bgmTimer) {
+        clearInterval(bgmTimer);
+        bgmTimer = null;
+      }
     },
   };
 }

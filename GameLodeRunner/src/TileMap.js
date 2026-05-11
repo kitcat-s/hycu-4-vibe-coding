@@ -46,6 +46,8 @@ export class TileMap {
     this.golds = new Set();
     /** @type {Cell} */
     this.exit = { col: 18, row: 5 };
+    /** @type {Map<string, number>} */
+    this.holes = new Map();
 
     this._parse(TEST_MAP_ROWS);
   }
@@ -81,6 +83,7 @@ export class TileMap {
   /** @param {number} col @param {number} row */
   isSolid(col, row) {
     const t = this.tileAt(col, row);
+    if (t === TILE.BRICK && this.isHole(col, row)) return false;
     return t === TILE.BRICK || t === TILE.CONCRETE;
   }
 
@@ -107,6 +110,42 @@ export class TileMap {
     return this.exit.col === col && this.exit.row === row;
   }
 
+  /** @param {number} col @param {number} row */
+  isHole(col, row) {
+    return this.holes.has(`${col},${row}`);
+  }
+
+  /** @param {number} col @param {number} row */
+  canDrill(col, row) {
+    if (!this.inBounds(col, row)) return false;
+    const t = this.tileAt(col, row);
+    return t === TILE.BRICK && !this.isHole(col, row);
+  }
+
+  /**
+   * @param {number} col
+   * @param {number} row
+   * @param {number} durationSec
+   */
+  drill(col, row, durationSec = 15) {
+    if (!this.canDrill(col, row)) return false;
+    this.holes.set(`${col},${row}`, durationSec);
+    return true;
+  }
+
+  /** @param {number} dt */
+  update(dt) {
+    for (const [key, timeLeft] of this.holes.entries()) {
+      const next = timeLeft - dt;
+      if (next <= 0) this.holes.delete(key);
+      else this.holes.set(key, next);
+    }
+  }
+
+  get exitActive() {
+    return this.goldRemaining === 0;
+  }
+
   get goldRemaining() {
     return this.golds.size;
   }
@@ -125,7 +164,7 @@ export class TileMap {
         const y = row * TILE_SIZE;
         const t = this.tileAt(col, row);
 
-        if (t === TILE.BRICK) {
+        if (t === TILE.BRICK && !this.isHole(col, row)) {
           ctx.fillStyle = "#7a4f2a";
           ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
           ctx.strokeStyle = "#5f3b1f";
@@ -174,6 +213,12 @@ export class TileMap {
           ctx.stroke();
           ctx.setLineDash([]);
         }
+        if (this.isHole(col, row)) {
+          ctx.fillStyle = "#050505";
+          ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+          ctx.strokeStyle = "#303030";
+          ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
+        }
       }
     }
 
@@ -198,12 +243,12 @@ export class TileMap {
     // 출구
     const ex = this.exit.col * TILE_SIZE;
     const ey = this.exit.row * TILE_SIZE;
-    ctx.fillStyle = "#3fa34d";
+    ctx.fillStyle = this.exitActive ? "#3fa34d" : "#646b72";
     ctx.fillRect(ex + 8, ey + 6, 16, 22);
-    ctx.strokeStyle = "#245e2d";
+    ctx.strokeStyle = this.exitActive ? "#245e2d" : "#454b51";
     ctx.lineWidth = 2;
     ctx.strokeRect(ex + 8, ey + 6, 16, 22);
-    ctx.fillStyle = "#b5f5be";
+    ctx.fillStyle = this.exitActive ? "#b5f5be" : "#adb5bd";
     ctx.beginPath();
     ctx.arc(ex + 20, ey + 17, 2, 0, Math.PI * 2);
     ctx.fill();
