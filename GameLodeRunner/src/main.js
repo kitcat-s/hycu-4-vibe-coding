@@ -18,11 +18,6 @@ const game = new Game(canvas, hud, audio);
 attachKeyboard(canvas);
 canvas.focus();
 
-/** 데모: H키로 피격(생명 감소) */
-window.addEventListener("keydown", (e) => {
-  if (e.code === "KeyH") game.applyDemoHit();
-});
-
 const loop = createGameLoop({
   update: (dt) => game.update(dt),
   render: () => game.render(),

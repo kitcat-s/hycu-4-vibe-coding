@@ -4,21 +4,35 @@ const KEYS = new Set();
  * @param {HTMLElement} target
  */
 export function attachKeyboard(target) {
+  const movementKeys = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "KeyW",
+    "KeyA",
+    "KeyS",
+    "KeyD",
+    "Space",
+  ]);
+
   const down = (e) => {
+    if (movementKeys.has(e.code)) e.preventDefault();
     KEYS.add(e.code);
   };
   const up = (e) => {
+    if (movementKeys.has(e.code)) e.preventDefault();
     KEYS.delete(e.code);
   };
   const blur = () => KEYS.clear();
 
-  target.addEventListener("keydown", down);
-  target.addEventListener("keyup", up);
+  window.addEventListener("keydown", down);
+  window.addEventListener("keyup", up);
   window.addEventListener("blur", blur);
 
   return () => {
-    target.removeEventListener("keydown", down);
-    target.removeEventListener("keyup", up);
+    window.removeEventListener("keydown", down);
+    window.removeEventListener("keyup", up);
     window.removeEventListener("blur", blur);
     KEYS.clear();
   };

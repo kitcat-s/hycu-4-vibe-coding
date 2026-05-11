@@ -1,9 +1,8 @@
 import { GameState } from "./GameState.js";
 import { isKeyDown } from "./Input.js";
 import { Player } from "./Player.js";
-import { Coin } from "./Coin.js";
-
-const GROUND_Y = 520;
+import { TileMap, TILE_SIZE } from "./TileMap.js";
+import { Camera } from "./Camera.js";
 
 export class Game {
   /**
@@ -21,8 +20,9 @@ export class Game {
     this.state = GameState.MENU;
     this.score = 0;
     this.level = 1;
-    /** @type {import('./GameObject.js').GameObject[]} */
-    this.objects = [];
+    this.message = "";
+    this.map = new TileMap();
+    this.camera = new Camera(canvas.width, canvas.height);
     this.player = new Player();
 
     this._wasSpace = false;
@@ -30,26 +30,12 @@ export class Game {
   }
 
   resetPlaying() {
+    this.map = new TileMap();
     this.player = new Player();
     this.player.lives = 3;
     this.score = 0;
     this.level = 1;
-    this.spawnLevel();
-  }
-
-  spawnLevel() {
-    this.objects = [];
-    const count = 4 + this.level;
-    for (let i = 0; i < count; i++) {
-      const x = 120 + ((i * 137) % (800 - 240));
-      const y = 360 + (i % 3) * 50;
-      this.objects.push(new Coin(x, y));
-    }
-  }
-
-  nextLevel() {
-    this.level += 1;
-    this.spawnLevel();
+    this.message = "";
   }
 
   /** @param {number} dt */
@@ -85,35 +71,21 @@ export class Game {
     this._wasSpace = space;
     this._wasKeyR = keyR;
 
-    this.player.updateWithInput(
-      dt,
-      (code) => isKeyDown(code),
-      () => {
-        this.audio.playJump();
-      },
-    );
+    this.player.updateWithInput(dt, this.map, (code) => isKeyDown(code));
+    const pCol = Math.round(this.player.x / TILE_SIZE);
+    const pRow = Math.round(this.player.y / TILE_SIZE);
 
-    for (const o of this.objects) o.update(dt);
-
-    for (const o of this.objects) {
-      if (!(o instanceof Coin) || o.markedForRemoval) continue;
-      const oy = o.y + o.bobOffset;
-      const dx = o.x - this.player.x;
-      const dy = oy - this.player.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < o.radius + 18) {
-        o.markedForRemoval = true;
-        this.score += 100;
-        this.audio.playCollect();
-      }
+    if (this.map.collectGold(pCol, pRow)) {
+      this.score += 100;
+      this.audio.playCollect();
     }
 
-    this.objects = this.objects.filter((o) => !o.markedForRemoval);
-
-    if (this.objects.length === 0) {
-      this.nextLevel();
+    if (this.map.goldRemaining === 0 && this.map.isExit(pCol, pRow)) {
+      this.message = "탈출 성공!";
+      this.state = GameState.GAME_OVER;
     }
 
+    this.camera.follow(this.player.centerX, this.player.centerY, this.map.width, this.map.height);
     this.syncHud();
   }
 
@@ -135,25 +107,19 @@ export class Game {
 
   render() {
     const { ctx, canvas } = this;
-    ctx.fillStyle = "#161b22";
+    ctx.fillStyle = "#040404";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 바닥
-    ctx.fillStyle = "#21262d";
-    ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
-    ctx.strokeStyle = "#30363d";
-    ctx.beginPath();
-    ctx.moveTo(0, GROUND_Y);
-    ctx.lineTo(canvas.width, GROUND_Y);
-    ctx.stroke();
-
+    ctx.save();
+    ctx.translate(-this.camera.x, -this.camera.y);
+    this.map.render(ctx);
     this.player.render(ctx);
-    for (const o of this.objects) o.render(ctx);
+    ctx.restore();
 
     if (this.state === GameState.MENU) {
-      this.drawOverlay("로드 러너 엔진 데모", "스페이스: 게임 시작");
+      this.drawOverlay("로드 러너 테스트 맵", "스페이스: 시작");
     } else if (this.state === GameState.GAME_OVER) {
-      this.drawOverlay("게임 오버", "R: 다시 시작");
+      this.drawOverlay(this.message || "게임 오버", "R: 다시 시작");
     }
   }
 
